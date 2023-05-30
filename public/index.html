@@ -2,34 +2,18 @@
 <html lang="en">
 
 <head>
-    <title>three.js - pointerlock controls</title>
+    <title>Interactive Game</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
-    <link type="text/css" rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/main.css">
+    <script type="module" src="js/model-viewer.min.js"></script>
 </head>
 
 <body>
-    <ul>
-        <li>
-            <a href="vr_button.html">vr_button</a>
-        </li>
-        <li>
-            <a href="xr_button.html">xr_button</a>
-        </li>
-        <li>
-            <a href="scaled_sr.html">scaled_sr</a>
-        </li>
-        <li>
-            <a href="player.html">player</a>
-        </li>
-        <li>
-            <a href="collisions.html">collisions</a>
-        </li>
-        <li>
-            <a href="collisions_gltf.html">collisions_gltf</a>
-        </li>
-    </ul>
-
+    <!-- Import maps polyfill -->
+    <!-- Remove this when import maps will be widely supported -->
+    <script async src="./js/es-module-shims.js"></script>
+    <script src="./js/index.js" type="module"></script>
 </body>
 
 </html>

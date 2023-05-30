@@ -5,6 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node ./bin/www",
+    "webpack": "webpack ./public/js/index.js -o build --mode production --target node",
     "build": ""
   },
   "author": "",
