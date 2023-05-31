@@ -1,6 +1,7 @@
 import * as THREE from './three.module.min.js';
 import { GLTFLoader } from './loaders/GLTFLoader.js';
 import { XRButton } from './webxr/XRButton.js';
+import { VRButton } from './webxr/VRButton.js';
 
 import { entity } from './engine/entity.js';
 import { player_entity } from './engine/player-entity.js'
@@ -32,7 +33,8 @@ class MyWorld {
 
         if (!this._avatar) {
             this._renderer.xr.enabled = true;
-            document.body.appendChild(XRButton.createButton(this._renderer));
+            //document.body.appendChild(XRButton.createButton(this._renderer));
+            document.body.appendChild(VRButton.createButton(this._renderer));
         }
 
         window.addEventListener('resize', () => {
@@ -52,7 +54,7 @@ class MyWorld {
         this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         this._camera.position.set(25, 10, 25);
         if (!this._avatar) {
-            this._camera.position.set(0, 18, 10);
+            this._camera.position.set(0, 1.7, 0);
         }
 
         this._scene = new THREE.Scene();
@@ -125,8 +127,6 @@ class MyWorld {
         this.loadModel('models/' + this._environment).then(glb => {
             if (this._avatar) {
                 glb.scene.scale.set(5, 5, 5);
-            } else {
-                glb.scene.scale.set(2, 2, 2);
             }
             this._scene.add(glb.scene);
             let scene = this._scene.getObjectByName("Scene");
