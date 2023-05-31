@@ -41,14 +41,18 @@ class MyWorld {
             this._renderer.setSize(window.innerWidth, window.innerHeight);
         });
 
-        const fov = 60;
-        const aspect = 1920 / 1080;
-        const near = 1.0;
-        const far = 1000.0;
+        const fov = 50;
+        const aspect = window.innerWidth / window.innerHeight;
+        var near = 1.0;
+        var far = 100;
+        if (!this._avatar) {
+            near = 0.1;
+            far = 10;
+        }
         this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
         this._camera.position.set(25, 10, 25);
         if (!this._avatar) {
-            this._camera.position.set(0, 3, 0);
+            this._camera.position.set(0, 18, 10);
         }
 
         this._scene = new THREE.Scene();
