@@ -14,6 +14,7 @@ import { third_person_camera } from './engine/third-person-camera.js';
 import { entity_manager } from './engine/entity-manager.js';
 import { messaging_manager } from './engine/messaging-manager.js';
 import { interaction_component } from './engine/interaction-component.js';
+import { controller_input } from './engine/controller-input.js';
 
 class MyWorld {
 
@@ -68,9 +69,10 @@ class MyWorld {
 
         this.loadLight();
         this.loadEnvironment();
-        this.loadControllers();
         if (this._avatar) {
             this.loadPlayer();
+        } else {
+            this.loadControllers();
         }
         this._previousRAF = null;
 
@@ -146,6 +148,17 @@ class MyWorld {
     }
 
     loadControllers() {
+        const leftHand = this._renderer.xr.getHand(0);
+        const leftHandModel = new OculusHandModel(leftHand);
+        leftHand.add(leftHandModel);
+        this._scene.add(leftHand);
+
+        const leftController = new entity.Entity();
+        leftController.AddComponent(controller_input.PinchController({ hand: leftHand, pinchstart: () => { this.test = "Left pinchstart"; } }));
+        leftController.AddComponent(controller_input.IndexTipController({ handModel: leftHandModel }));
+        this._entityManager.Add(currEntity, '');
+        
+        /*
         const controller1 = this._renderer.xr.getController(0);
         this._scene.add(controller1);
 
@@ -166,7 +179,7 @@ class MyWorld {
         const controllerModelFactory = new XRControllerModelFactory();
         const handModelFactory = new XRHandModelFactory();
 
-        // Right Hand
+        // Left Hand
         const controllerGrip1 = this._renderer.xr.getControllerGrip(0);
         controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
         this._scene.add(controllerGrip1);
@@ -178,22 +191,20 @@ class MyWorld {
         this._scene.add(hand1);
 
         hand1.addEventListener('pinchstart', () => {
-            console.log("Hand 1: pinchstart");
-            this.test = "Hand 1: pinchstart";
+            this.test = "Left pinchstart";
         });
         hand1.addEventListener('pinchend', () => {
-            console.log("Hand 1: pinchend");
-            this.test = "Hand 1: pinchend";
+            this.test = "Left pinchend";
         });
 
-        // Hand 2
+        // Right Hand
         const controllerGrip2 = this._renderer.xr.getControllerGrip(1);
         controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
         this._scene.add(controllerGrip2);
 
         const hand2 = this._renderer.xr.getHand(1);
         hand2.addEventListener('pinchstart', (event) => {
-            this.test = "pinchstart";
+            this.test = "Right pinchstart";
             const controller = event.target;
             const clickables = this._entityManager.FilterComponents('ClickableComponent');
             for (let clickable of clickables) {
@@ -207,8 +218,7 @@ class MyWorld {
             //}
         });
         hand2.addEventListener('pinchend', (event) => {
-            console.log("Hand 2: pinchend");
-            this.test = "Hand 2: pinchend";
+            this.test = "Right pinchend";
         });
         hand2.add(handModelFactory.createHandModel(hand2));
         this._scene.add(hand2);
@@ -221,6 +231,7 @@ class MyWorld {
 
         controller1.add(line.clone());
         controller2.add(line.clone());
+        */
     }
 
     collideObject(indexTip) {
