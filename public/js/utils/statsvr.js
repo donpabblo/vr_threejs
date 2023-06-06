@@ -22,8 +22,8 @@ var StatsVR = /** @class */ (function () {
             scene.add(camera);
         }
         this.canvas = document.createElement("canvas");
-        this.canvas.width = 64;
-        this.canvas.height = 64;
+        this.canvas.width = 200;
+        this.canvas.height = 200;
         this.ctx = this.canvas.getContext("2d");
         this.texture = new Texture(this.canvas);
         var material = new MeshBasicMaterial({

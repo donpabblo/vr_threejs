@@ -5,6 +5,7 @@ import { VRButton } from './webxr/VRButton.js';
 import { XRControllerModelFactory } from './webxr/XRControllerModelFactory.js';
 import { XRHandModelFactory } from './webxr/XRHandModelFactory.js';
 import { StatsVR } from './utils/statsvr.js'
+import { OculusHandModel } from './webxr/OculusHandModel.js';
 
 import { entity } from './engine/entity.js';
 import { player_entity } from './engine/player-entity.js'
@@ -22,7 +23,7 @@ class MyWorld {
         this._environment = 'simple_office.glb';
         this.init();
         this.animate();
-        this.test = "Prova";
+        this.test = "Testo davvero molto lungo";
     }
 
     init() {
@@ -77,6 +78,7 @@ class MyWorld {
         this.statsVR.setX(-0.5);
         this.statsVR.setY(0.5);
         this.statsVR.setZ(-5);
+
     }
 
     animate() {
@@ -101,8 +103,19 @@ class MyWorld {
                 this._renderer.render(this._scene, this._camera);
                 this.statsVR.endTimer();
                 this.step(time - this._previousRAF);
+                this.checkFingerPress();
                 this._previousRAF = time;
             });
+        }
+    }
+
+    checkFingerPress() {
+        const clickables = this._entityManager.FilterComponents('ClickableComponent');
+        for (let clickable of clickables) {
+            let curentObject = clickable.object;
+            if (this.handModel1 && this.handModel1.intersectBoxObject(curentObject)) {
+                clickable.publish({});
+            }
         }
     }
 
@@ -138,16 +151,32 @@ class MyWorld {
 
         const controller2 = this._renderer.xr.getController(1);
         this._scene.add(controller2);
+        //const swordMaterial = new THREE.MeshBasicMaterial({ color: 0xdb3236 });
+        //const swordLeft = new THREE.Mesh(new THREE.BoxGeometry(0.03, 4.0, 0.03), swordMaterial);
+        //swordLeft.geometry.translate(0, -1.8, 0);
+        //swordLeft.geometry.rotateX(Math.PI / 2);
+        //controller2.add(swordLeft);
+        //const swordLeftHandGuard = new THREE.Mesh(
+        //    new THREE.CylinderGeometry(0.005, 0.05, 0.2, 6),
+        //    swordMaterial
+        //);
+        //swordLeftHandGuard.geometry.rotateX(Math.PI / 2);
+        //controller2.add(swordLeftHandGuard);
 
         const controllerModelFactory = new XRControllerModelFactory();
         const handModelFactory = new XRHandModelFactory();
 
-        // Hand 1
+        // Right Hand
         const controllerGrip1 = this._renderer.xr.getControllerGrip(0);
         controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
         this._scene.add(controllerGrip1);
 
         const hand1 = this._renderer.xr.getHand(0);
+        this.handModel1 = new OculusHandModel(hand1);
+        hand1.add(this.handModel1);
+        //hand1.add(handModelFactory.createHandModel(hand1));
+        this._scene.add(hand1);
+
         hand1.addEventListener('pinchstart', () => {
             console.log("Hand 1: pinchstart");
             this.test = "Hand 1: pinchstart";
@@ -156,9 +185,6 @@ class MyWorld {
             console.log("Hand 1: pinchend");
             this.test = "Hand 1: pinchend";
         });
-        hand1.add(handModelFactory.createHandModel(hand1));
-
-        this._scene.add(hand1);
 
         // Hand 2
         const controllerGrip2 = this._renderer.xr.getControllerGrip(1);
