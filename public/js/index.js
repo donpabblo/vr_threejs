@@ -4,6 +4,7 @@ import { XRButton } from './webxr/XRButton.js';
 import { VRButton } from './webxr/VRButton.js';
 import { XRControllerModelFactory } from './webxr/XRControllerModelFactory.js';
 import { XRHandModelFactory } from './webxr/XRHandModelFactory.js';
+import { StatsVR } from './utils/statsvr.js'
 
 import { entity } from './engine/entity.js';
 import { player_entity } from './engine/player-entity.js'
@@ -21,6 +22,7 @@ class MyWorld {
         this._environment = 'simple_office.glb';
         this.init();
         this.animate();
+        this.test = "";
     }
 
     init() {
@@ -70,6 +72,11 @@ class MyWorld {
             this.loadPlayer();
         }
         this._previousRAF = null;
+
+        this.statsVR = new StatsVR(this._scene, this._camera);
+        this.statsVR.setX(-0.5);
+        this.statsVR.setY(0.5);
+        this.statsVR.setZ(-5);
     }
 
     animate() {
@@ -85,10 +92,14 @@ class MyWorld {
             });
         } else {
             this._renderer.setAnimationLoop((time) => {
+                this.statsVR.startTimer();
                 if (this._previousRAF === null) {
                     this._previousRAF = time;
                 }
+                this.statsVR.setCustom1(this.test);
+                this.statsVR.update();
                 this._renderer.render(this._scene, this._camera);
+                this.statsVR.endTimer();
                 this.step(time - this._previousRAF);
                 this._previousRAF = time;
             });
@@ -139,9 +150,11 @@ class MyWorld {
         const hand1 = this._renderer.xr.getHand(0);
         hand1.addEventListener('pinchstart', () => {
             console.log("Hand 1: pinchstart");
+            this.test = "Hand 1: pinchstart";
         });
         hand1.addEventListener('pinchend', () => {
             console.log("Hand 1: pinchend");
+            this.test = "Hand 1: pinchend";
         });
         hand1.add(handModelFactory.createHandModel(hand1));
 
@@ -156,13 +169,15 @@ class MyWorld {
         hand2.addEventListener('pinchstart', (event) => {
             const controller = event.target;
             const indexTip = controller.joints['index-finger-tip'];
-            const object = collideObject(indexTip);
+            const object = this.collideObject(indexTip);
             if (object) {
+                this.test = "Publish message";
                 object.publish({});
             }
         });
         hand2.addEventListener('pinchend', (event) => {
             console.log("Hand 2: pinchend");
+            this.test = "Hand 2: pinchend";
         });
         hand2.add(handModelFactory.createHandModel(hand2));
         this._scene.add(hand2);
