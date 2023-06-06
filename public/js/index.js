@@ -22,7 +22,7 @@ class MyWorld {
         this._environment = 'simple_office.glb';
         this.init();
         this.animate();
-        this.test = "";
+        this.test = "Prova";
     }
 
     init() {
@@ -167,13 +167,18 @@ class MyWorld {
 
         const hand2 = this._renderer.xr.getHand(1);
         hand2.addEventListener('pinchstart', (event) => {
+            this.test = "pinchstart";
             const controller = event.target;
-            const indexTip = controller.joints['index-finger-tip'];
-            const object = this.collideObject(indexTip);
-            if (object) {
-                this.test = "Publish message";
-                object.publish({});
+            const clickables = this._entityManager.FilterComponents('ClickableComponent');
+            for (let clickable of clickables) {
+                clickable.publish({});
             }
+            //const indexTip = controller.joints['index-finger-tip'];
+            //const object = this.collideObject(indexTip);
+            //if (object) {
+            //    this.test = "Publish message";
+            //    object.publish({});
+            //}
         });
         hand2.addEventListener('pinchend', (event) => {
             console.log("Hand 2: pinchend");
