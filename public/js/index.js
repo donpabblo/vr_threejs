@@ -2,6 +2,8 @@ import * as THREE from './three.module.min.js';
 import { GLTFLoader } from './loaders/GLTFLoader.js';
 import { XRButton } from './webxr/XRButton.js';
 import { VRButton } from './webxr/VRButton.js';
+import { XRControllerModelFactory } from './webxr/XRControllerModelFactory.js';
+import { XRHandModelFactory } from './webxr/XRHandModelFactory.js';
 
 import { entity } from './engine/entity.js';
 import { player_entity } from './engine/player-entity.js'
@@ -63,6 +65,7 @@ class MyWorld {
 
         this.loadLight();
         this.loadEnvironment();
+        this.loadControllers();
         if (this._avatar) {
             this.loadPlayer();
         }
@@ -116,6 +119,74 @@ class MyWorld {
             }));
         this._entityManager.Add(camera, 'player-camera');
 
+    }
+
+    loadControllers() {
+        const controller1 = this._renderer.xr.getController(0);
+        this._scene.add(controller1);
+
+        const controller2 = this._renderer.xr.getController(1);
+        this._scene.add(controller2);
+
+        const controllerModelFactory = new XRControllerModelFactory();
+        const handModelFactory = new XRHandModelFactory();
+
+        // Hand 1
+        const controllerGrip1 = this._renderer.xr.getControllerGrip(0);
+        controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+        this._scene.add(controllerGrip1);
+
+        const hand1 = this._renderer.xr.getHand(0);
+        hand1.addEventListener('pinchstart', () => {
+            console.log("Hand 1: pinchstart");
+        });
+        hand1.addEventListener('pinchend', () => {
+            console.log("Hand 1: pinchend");
+        });
+        hand1.add(handModelFactory.createHandModel(hand1));
+
+        this._scene.add(hand1);
+
+        // Hand 2
+        const controllerGrip2 = this._renderer.xr.getControllerGrip(1);
+        controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+        this._scene.add(controllerGrip2);
+
+        const hand2 = this._renderer.xr.getHand(1);
+        hand2.addEventListener('pinchstart', (event) => {
+            const controller = event.target;
+            const indexTip = controller.joints['index-finger-tip'];
+            const object = collideObject(indexTip);
+            if (object) {
+                object.publish({});
+            }
+        });
+        hand2.addEventListener('pinchend', (event) => {
+            console.log("Hand 2: pinchend");
+        });
+        hand2.add(handModelFactory.createHandModel(hand2));
+        this._scene.add(hand2);
+
+        const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, - 1)]);
+
+        const line = new THREE.Line(geometry);
+        line.name = 'line';
+        line.scale.z = 5;
+
+        controller1.add(line.clone());
+        controller2.add(line.clone());
+    }
+
+    collideObject(indexTip) {
+        const tmpVector1 = new THREE.Vector3();
+        const tmpVector2 = new THREE.Vector3();
+        const clickables = this._entityManager.FilterComponents('ClickableComponent');
+        for (let clickable of clickables) {
+            const distance = indexTip.getWorldPosition(tmpVector1).distanceTo(clickable.getWorldPosition(tmpVector2));
+            console.log(distance);
+            return null;
+        }
+        return null;
     }
 
     loadLight() {
