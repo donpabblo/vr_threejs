@@ -154,8 +154,8 @@ class MyWorld {
         this._scene.add(leftHand);
 
         const leftController = new entity.Entity();
-        leftController.AddComponent(controller_input.PinchController({ hand: leftHand, pinchstart: () => { this.test = "Left pinchstart"; } }));
-        leftController.AddComponent(controller_input.IndexTipController({ handModel: leftHandModel }));
+        leftController.AddComponent(new controller_input.PinchController({ hand: leftHand, pinchstart: () => { this.test = "Left pinchstart"; } }));
+        leftController.AddComponent(new controller_input.IndexTipController({ handModel: leftHandModel }));
         this._entityManager.Add(currEntity, '');
         
         /*
