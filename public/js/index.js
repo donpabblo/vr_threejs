@@ -1,4 +1,5 @@
 import * as THREE from './three.module.min.js';
+import * as ThreeMeshUI from './three-mesh-ui.js';
 import { GLTFLoader } from './loaders/GLTFLoader.js';
 import { XRButton } from './webxr/XRButton.js';
 import { VRButton } from './webxr/VRButton.js';
@@ -21,7 +22,11 @@ class MyWorld {
     constructor(avatar) {
         this._previousRAF = null;
         this._avatar = avatar;
-        this._environment = 'simple_office.glb';
+        if (avatar) {
+            this._environment = 'roblox_office.glb';
+        } else {
+            this._environment = 'simple_office.glb';
+        }
         this.init();
         this.animate();
         this.test = "Testo davvero molto lungo";
@@ -74,13 +79,77 @@ class MyWorld {
         } else {
             this.loadControllers();
         }
+
         this._previousRAF = null;
 
-        this.statsVR = new StatsVR(this._scene, this._camera);
-        this.statsVR.setX(-0.5);
-        this.statsVR.setY(0.5);
-        this.statsVR.setZ(-5);
+        //this.statsVR = new StatsVR(this._scene, this._camera);
+        //this.statsVR.setX(-0.5);
+        //this.statsVR.setY(0.5);
+        //this.statsVR.setZ(-5);
+        //this.makeTextPanel();
 
+    }
+
+    makeTextPanel() {
+        const container = new ThreeMeshUI.Block({
+            width: 1.3,
+            height: 0.5,
+            padding: 0.05,
+            justifyContent: 'center',
+            textAlign: 'left',
+            fontFamily: '../font/Roboto-msdf.json',
+            fontTexture: '../font/Roboto-msdf.png'
+            // interLine: 0,
+        });
+
+        container.position.set(0, 1, -1.8);
+        container.rotation.x = -0.55;
+        this._scene.add(container);
+
+        container.add(
+            new ThreeMeshUI.Text({
+                // content: 'This library supports line-break-friendly-characters,',
+                content: 'This library supports line break friendly characters',
+                fontSize: 0.055
+            }),
+
+            new ThreeMeshUI.Text({
+                content: ' As well as multi font size lines with consistent vertical spacing',
+                fontSize: 0.08
+            })
+        );
+
+        return
+        container.onAfterUpdate = function () {
+
+
+            console.log(container.lines);
+
+            if (!container.lines) return;
+
+
+            console.log("lines", container.lines);
+
+            var plane = new Mesh(
+                new PlaneGeometry(container.lines.width, container.lines.height),
+                new MeshBasicMaterial({ color: 0xff9900 })
+            );
+
+            // plane.position.x = container.lines.x;
+            // plane.position.y = container.lines.height/2 - container.getInterLine()/2;
+
+            const INNER_HEIGHT = container.getHeight() - (container.padding * 2 || 0);
+
+            if (container.getJustifyContent() === 'start') {
+                plane.position.y = (INNER_HEIGHT / 2) - container.lines.height / 2;
+            } else if (container.getJustifyContent() === 'center') {
+                plane.position.y = 0;
+            } else {
+                plane.position.y = -(INNER_HEIGHT / 2) + container.lines.height / 2
+            }
+
+            container.add(plane);
+        }
     }
 
     animate() {
@@ -96,28 +165,18 @@ class MyWorld {
             });
         } else {
             this._renderer.setAnimationLoop((time) => {
-                this.statsVR.startTimer();
+                //this.statsVR.startTimer();
                 if (this._previousRAF === null) {
                     this._previousRAF = time;
                 }
-                this.statsVR.setCustom1(this.test);
-                this.statsVR.update();
+                //this.statsVR.setCustom1(this.test);
+                //this.statsVR.update();
                 this._renderer.render(this._scene, this._camera);
-                this.statsVR.endTimer();
+                //this.statsVR.endTimer();
                 this.step(time - this._previousRAF);
-                this.checkFingerPress();
+                //ThreeMeshUI.update();
                 this._previousRAF = time;
             });
-        }
-    }
-
-    checkFingerPress() {
-        const clickables = this._entityManager.FilterComponents('ClickableComponent');
-        for (let clickable of clickables) {
-            let curentObject = clickable.object;
-            if (this.handModel1 && this.handModel1.intersectBoxObject(curentObject)) {
-                clickable.publish({});
-            }
         }
     }
 
@@ -152,42 +211,46 @@ class MyWorld {
         const leftHandModel = new OculusHandModel(leftHand);
         leftHand.add(leftHandModel);
         this._scene.add(leftHand);
+        const leftHandEntity = new entity.Entity();
+        leftHandEntity.AddComponent(new controller_input.PinchController({ hand: leftHand, pinchStart: () => { this.test = "Left pinchstart"; }, pinchEnd: () => { this.test = "Left pinchend"; } }));
+        leftHandEntity.AddComponent(new controller_input.IndexTipController({ handModel: leftHandModel }));
+        this._entityManager.Add(leftHandEntity, 'leftHandEntity');
 
-        const leftController = new entity.Entity();
-        leftController.AddComponent(new controller_input.PinchController({ hand: leftHand, pinchstart: () => { this.test = "Left pinchstart"; } }));
-        leftController.AddComponent(new controller_input.IndexTipController({ handModel: leftHandModel }));
-        this._entityManager.Add(currEntity, '');
-        
+        const controller = this._renderer.xr.getController(0);
+        this._scene.add(controller);
+
+        const rightHand = this._renderer.xr.getHand(1);
+        const rightHandModel = new OculusHandModel(rightHand);
+        rightHand.add(rightHandModel);
+        this._scene.add(rightHand);
+        const rightHandEntity = new entity.Entity();
+        rightHandEntity.AddComponent(new controller_input.PinchController({ hand: rightHand, pinchStart: () => { this.test = "Right pinchstart"; }, pinchEnd: () => { this.test = "Right pinchend"; } }));
+        rightHandEntity.AddComponent(new controller_input.IndexTipController({ handModel: rightHandModel }));
+        //rightHandEntity.AddComponent(new controller_input.Sword({ controller: controller }));
+        this._entityManager.Add(rightHandEntity, 'rightHandEntity');
+
+        const textEntity = new entity.Entity();
+        textEntity.AddComponent(new interaction_component.TextComponent(this._scene, this._camera, this._messagingManager));
+        this._entityManager.Add(textEntity, 'textEntity');
+
         /*
         const controller1 = this._renderer.xr.getController(0);
         this._scene.add(controller1);
 
         const controller2 = this._renderer.xr.getController(1);
         this._scene.add(controller2);
-        //const swordMaterial = new THREE.MeshBasicMaterial({ color: 0xdb3236 });
-        //const swordLeft = new THREE.Mesh(new THREE.BoxGeometry(0.03, 4.0, 0.03), swordMaterial);
-        //swordLeft.geometry.translate(0, -1.8, 0);
-        //swordLeft.geometry.rotateX(Math.PI / 2);
-        //controller2.add(swordLeft);
-        //const swordLeftHandGuard = new THREE.Mesh(
-        //    new THREE.CylinderGeometry(0.005, 0.05, 0.2, 6),
-        //    swordMaterial
-        //);
-        //swordLeftHandGuard.geometry.rotateX(Math.PI / 2);
-        //controller2.add(swordLeftHandGuard);
 
-        const controllerModelFactory = new XRControllerModelFactory();
-        const handModelFactory = new XRHandModelFactory();
+        //const controllerModelFactory = new XRControllerModelFactory();
+        //const handModelFactory = new XRHandModelFactory();
 
         // Left Hand
-        const controllerGrip1 = this._renderer.xr.getControllerGrip(0);
-        controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
-        this._scene.add(controllerGrip1);
+        //const controllerGrip1 = this._renderer.xr.getControllerGrip(0);
+        //controllerGrip1.add(controllerModelFactory.createControllerModel(controllerGrip1));
+        //this._scene.add(controllerGrip1);
 
         const hand1 = this._renderer.xr.getHand(0);
         this.handModel1 = new OculusHandModel(hand1);
         hand1.add(this.handModel1);
-        //hand1.add(handModelFactory.createHandModel(hand1));
         this._scene.add(hand1);
 
         hand1.addEventListener('pinchstart', () => {
@@ -198,52 +261,30 @@ class MyWorld {
         });
 
         // Right Hand
-        const controllerGrip2 = this._renderer.xr.getControllerGrip(1);
-        controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
-        this._scene.add(controllerGrip2);
+        //const controllerGrip2 = this._renderer.xr.getControllerGrip(1);
+        //controllerGrip2.add(controllerModelFactory.createControllerModel(controllerGrip2));
+        //this._scene.add(controllerGrip2);
 
         const hand2 = this._renderer.xr.getHand(1);
+        this.handModel2 = new OculusHandModel(hand2);
+        hand2.add(this.handModel2);
+        this._scene.add(hand2);
         hand2.addEventListener('pinchstart', (event) => {
             this.test = "Right pinchstart";
-            const controller = event.target;
-            const clickables = this._entityManager.FilterComponents('ClickableComponent');
-            for (let clickable of clickables) {
-                clickable.publish({});
-            }
-            //const indexTip = controller.joints['index-finger-tip'];
-            //const object = this.collideObject(indexTip);
-            //if (object) {
-            //    this.test = "Publish message";
-            //    object.publish({});
-            //}
         });
         hand2.addEventListener('pinchend', (event) => {
             this.test = "Right pinchend";
         });
-        hand2.add(handModelFactory.createHandModel(hand2));
         this._scene.add(hand2);
-
-        const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, - 1)]);
-
-        const line = new THREE.Line(geometry);
-        line.name = 'line';
-        line.scale.z = 5;
-
-        controller1.add(line.clone());
-        controller2.add(line.clone());
         */
-    }
 
-    collideObject(indexTip) {
-        const tmpVector1 = new THREE.Vector3();
-        const tmpVector2 = new THREE.Vector3();
-        const clickables = this._entityManager.FilterComponents('ClickableComponent');
-        for (let clickable of clickables) {
-            const distance = indexTip.getWorldPosition(tmpVector1).distanceTo(clickable.getWorldPosition(tmpVector2));
-            console.log(distance);
-            return null;
-        }
-        return null;
+        //const geometry = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, - 1)]);
+        //const line = new THREE.Line(geometry);
+        //line.name = 'line';
+        //line.scale.z = 5;
+        //controller1.add(line.clone());
+        //controller2.add(line.clone());
+
     }
 
     loadLight() {
@@ -279,7 +320,8 @@ class MyWorld {
                                 currCmp = new interaction_component.NeonComponent(this._messagingManager, obj, cmp.topic);
                                 break;
                             case "ExitComponent":
-                                currCmp = new interaction_component.ExitComponent(this._messagingManager, cmp.topic);
+                                let isVR = this._avatar ? false : true;
+                                currCmp = new interaction_component.ExitComponent(this._messagingManager, cmp.topic, isVR);
                                 break;
                         }
                         currEntity.AddComponent(currCmp);
