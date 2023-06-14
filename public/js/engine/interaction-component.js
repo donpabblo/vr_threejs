@@ -8,9 +8,9 @@ export const interaction_component = (() => {
 
     class PickableComponent extends entity.Component {
         constructor() {
-            super();
+            super(this.object);
+            this.object = object;
         }
-
         InitComponent() {
         }
     };
@@ -74,11 +74,19 @@ export const interaction_component = (() => {
         }
 
     }
+    
+    class LedComponent extends entity.Component {
 
-    class GrabbableComponent extends entity.Component {
-        constructor(object) {
+        constructor(messagingManager, object, topic) {
             super();
+            this.messagingManager = messagingManager;
             this.object = object;
+            this.messagingManager.subscribe(topic, (m) => { this._OnClicked(m); });
+        }
+
+        _OnClicked(m) {
+            let emission = this.object.material.emissiveIntensity === 0 ? 1 : 0;
+            this.object.material.emissiveIntensity = emission;
         }
     }
 
@@ -96,80 +104,223 @@ export const interaction_component = (() => {
             this.object.children[1].visible = !this.object.children[1].visible;
         }
     }
+    /*
+    class ConfirmComponent extends entity.Component {
+        constructor(scene, camera, messagingManager, handModels) {
+            super();
+            this.container = new ThreeMeshUI.Block({
+                justifyContent: 'center',
+                contentDirection: 'row-reverse',
+                fontFamily: '../../font/Roboto-msdf.json',
+                fontTexture: '../../font/Roboto-msdf.png',
+                fontSize: 0.07,
+                padding: 0.02,
+                backgroundOpacity: 0.0001,
+                width: 1.2
+            });
+            //this.container.position.set(0, 0.5, -0.5);
+            //this.container.rotation.x = -0.40;
+            this.camera = camera;
+            this.scene = scene;
+            this.handModels = handModels;
+            this.active = false;
+            this.messagingManager = messagingManager;
+            this.clock = new THREE.Clock();
+
+            this._CreateButtons();
+
+            messagingManager.subscribe("confirm_cmp", (m) => { this._OnMessage(m); });
+        }
+
+        _OnMessage(m) {
+            if (m.procediBehaviour) {
+                this.procediBehaviour = m.procediBehaviour;
+            }
+            //if (this.active) {
+            //    this.scene.remove(this.container);//Elimina le ButtonUI
+            //    this.active = false;
+            //} else {
+            this.scene.add(this.container);
+            if (m.confirm) {
+                this.container.add(this.buttonProcedi, this.buttonAnnulla);
+            } else {
+                this.container.add(this.buttonProcedi);
+            }
+            this.active = true;
+            //}
+        }
+
+        Update() {
+            if (this.active) {
+                this.container.position.copy(this.camera.position);
+                this.container.rotation.copy(this.camera.rotation);
+                this.container.updateMatrix();
+                this.container.translateY(- 0.3);
+                this.container.translateZ(- 0.8);
+                this.container.rotateX(-0.4);
+
+                for (let handModel of this.handModels) {
+                    if (handModel.intersectBoxObject(this.buttonProcedi)) {
+                        this.buttonProcedi.setState('hovered');
+                        this.buttonProcediHovered = true;
+                        this.clock.start();
+                        this.lastInteraction = 0;
+                    }
+                    if (handModel.intersectBoxObject(this.buttonAnnulla)) {
+                        this.buttonAnnulla.setState('hovered');
+                        this.buttonAnnullaHovered = true;
+                        this.clock.start();
+                        this.lastInteraction = 0;
+                    }
+                }
+
+                if (this.buttonProcediHovered || this.buttonAnnullaHovered) {
+                    let currentTime = this.clock.getElapsedTime();
+                    if (currentTime - this.lastInteraction >= 0.5) {
+                        this.messagingManager.publish("text_cmp", {});//Elimina la TextUI
+                        this.scene.remove(this.container);//Elimina le ButtonUI
+                        if (this.procediBehaviour) {
+                            this.messagingManager.publish(this.procediBehaviour.topic, this.procediBehaviour.message);
+                        }
+                        this.active = false;
+                        this.buttonProcediHovered = false;
+                        this.buttonAnnullaHovered = false;
+                        this.clock.stop();
+                    }
+                }
+                ThreeMeshUI.update();
+            }
+        }
+
+        _CreateButtons(confirm) {
+            const buttonOptions = {
+                width: 0.5,
+                height: 0.1,
+                justifyContent: 'center',
+                offset: 0.05,
+                margin: 0.02,
+                borderRadius: 0.005
+            };
+            // Options for component.setupState().
+            // It must contain a 'state' parameter, which you will refer to with component.setState( 'name-of-the-state' ).
+
+            const hoveredStateAttributes = {
+                state: 'hovered',
+                attributes: {
+                    offset: 0.035,
+                    backgroundColor: new THREE.Color(0x999999),
+                    backgroundOpacity: 1,
+                    fontColor: new THREE.Color(0xffffff)
+                },
+            };
+
+            const idleStateAttributes = {
+                state: 'idle',
+                attributes: {
+                    offset: 0.035,
+                    backgroundColor: new THREE.Color(0x666666),
+                    backgroundOpacity: 0.3,
+                    fontColor: new THREE.Color(0xffffff)
+                },
+            };
+
+            this.buttonProcedi = new ThreeMeshUI.Block(buttonOptions);
+            this.buttonAnnulla = new ThreeMeshUI.Block(buttonOptions);
+
+            this.buttonProcedi.add(
+                new ThreeMeshUI.Text({ content: 'Procedi' })
+            );
+
+            this.buttonAnnulla.add(
+                new ThreeMeshUI.Text({ content: 'Annulla' })
+            );
+
+            //const selectedAttributes = {
+            //    offset: 0.02,
+            //    backgroundColor: new THREE.Color(0x777777),
+            //    fontColor: new THREE.Color(0x222222)
+            //};
+
+            //this.buttonProcedi.setupState({
+            //    state: 'selected',
+            //    attributes: selectedAttributes,
+            //    onSet: () => {
+            //        this.active = false;
+            //        this.messagingManager.publish("text_cmp", {});//Elimina la TextUI
+            //        this.scene.remove(this.container);//Elimina le ButtonUI
+            //        this.messagingManager.publish(this.procediBehaviour.topic, this.procediBehaviour.message);//Elimina la TextUI
+            //    }
+            //});
+            this.buttonProcedi.setupState(hoveredStateAttributes);
+            this.buttonProcedi.setupState(idleStateAttributes);
+
+            //buttonAnnulla.setupState({
+            //    state: 'selected',
+            //    attributes: selectedAttributes,
+            //    onSet: () => {
+            //        this.active = false;
+            //        this.messagingManager.publish("text_cmp", {});//Elimina la TextUI
+            //        this.scene.remove(this.container);//Elimina le ButtonUI
+            //    }
+            //});
+            this.buttonAnnulla.setupState(hoveredStateAttributes);
+            this.buttonAnnulla.setupState(idleStateAttributes);
+
+        }
+    }
+    */
 
     class TextComponent extends entity.Component {
 
         constructor(scene, camera, messagingManager) {
             super();
-            this.textMessage = "CIAO IO SONO PAOLO SERVILLO TU CHI SEI";
             this.container = new ThreeMeshUI.Block({
-                width: 1.3,
-                height: 0.5,
-                padding: 0.1,
-                justifyContent: 'center',
-                textAlign: 'left',
                 fontFamily: '../../font/Roboto-msdf.json',
                 fontTexture: '../../font/Roboto-msdf.png',
-                // interLine: 0,
+                width: 1.3,
+                height: 0.5,
+                padding: 0.05,
+                justifyContent: 'center',
+                textAlign: 'left'
             });
-            this.container.position.set(0, 1.5, -1.8);
-            this.container.rotation.x = -0.40;
+            //this.container.position.set(0, 1.5, -0.5);
+            //this.container.rotation.x = -0.40;
+            this.camera = camera;
+            this.scene = scene;
 
-            scene.add(this.container);
-
-            this.container.add(
-                new ThreeMeshUI.Text({
-                    // content: 'This library supports line-break-friendly-characters,',
-                    content: 'This library supports line break friendly characters',
-                    fontSize: 0.055
-                }),
-
-                new ThreeMeshUI.Text({
-                    content: ' As well as multi font size lines with consistent vertical spacing',
-                    fontSize: 0.08
-                })
-            );
-            messagingManager.subscribe("message", (m) => { this._OnMessage(m); });
-        }
-
-        Update() {
-            //this.container.position.copy(this.camera.position);
-            //this.container.rotation.copy(this.camera.rotation);
-            //this.container.updateMatrix();
-            //this.container.translateZ(- 5);
-
-            this.container.set({
-                //borderRadius: [0, 0.2 + 0.2 * Math.sin(Date.now() / 500), 0, 0],
-                borderWidth: 0.01 - 0.02 * Math.sin(Date.now() / 500),
-                borderColor: new THREE.Color(0.5 + 0.5 * Math.sin(Date.now() / 500), 0.5, 1),
-                borderOpacity: 1
-            });
-
-            if (this.textMessage) {
-                this.container.children = [this.container.children[0]];
-                this.container.add(new ThreeMeshUI.Text({
-                    // content: 'This library supports line-break-friendly-characters,',
-                    content: this.textMessage,
-                    fontSize: 0.055
-                }));
-            }
-            this.textMessage = null;
-            ThreeMeshUI.update();
+            messagingManager.subscribe("text_cmp", (m) => { this._OnMessage(m); });
         }
 
         _OnMessage(m) {
-            this.textMessage = m.message;
+            this.container.children = [this.container.children[0]];
+            if (m.show) {
+                this.container.add(new ThreeMeshUI.Text({
+                    content: m.text
+                }));
+                this.scene.add(this.container);
+            } else {
+                this.scene.remove(this.container);
+            }
+        }
+
+        Update() {
+            this.container.position.copy(this.camera.position);
+            this.container.rotation.copy(this.camera.rotation);
+            this.container.updateMatrix();
+            this.container.translateZ(- 1.5);
+            ThreeMeshUI.update();
         }
     }
 
     class ExitComponent extends entity.Component {
 
-        constructor(messagingManager, topic, isVR) {
+        constructor(messagingManager) {
             super();
-            this.isVR = isVR;
             this.messagingManager = messagingManager;
-            this.messagingManager.subscribe(topic, (m) => { this._OnClicked(m); });
-            this.onExit = false;
+            this.messagingManager.subscribe("session", (m) => { this._OnSession(m); });
+            this.messagingManager.subscribe("exit", (m) => { this._OnClicked(m); });
+            this.calculateState = false;
+            this.saveState = false;
         }
 
         _calculateScore() {
@@ -191,18 +342,52 @@ export const interaction_component = (() => {
             return actualScore.toString();
         }
 
+        _OnSession(m) {
+            this.session = m.session;
+        }
+
         _OnClicked(m) {
-            if (this.isVR) {
-                if (!this.onExit) {
-                    this.messagingManager.publish("message", { visible: true, message: "Stai per uscire dall'ufficio. Le tue azioni saranno valutate!" });
-                    this.onExit = true;
+            if (this.session) {
+                if (m.reset) {
+                    this.calculateState = false;
+                    this.saveState = false;
+                    this.messagingManager.publish("text_cmp", { show: false });
                 } else {
-                    //this.messagingManager.publish("message", { visible: true, message: "100 punti" });
-                    let score = this._calculateScore();
-                    let message = "Hai totalizzato un numero di azioni corrette pari al " + score + "%";
-                    this.messagingManager.publish("message", { visible: true, message: message });
-                    _updateSCORM(score);
+                    if (m.rightPinch) {
+                        if (this.saveState) {
+                            this._updateSCORM(this.score);
+                            this.calculateState = false;
+                            this.saveState = false;
+                            this.session.end();
+                        }
+                        if (this.calculateState) {
+                            this.score = this._calculateScore();
+                            let message = "Hai totalizzato un numero di azioni corrette pari al " + this.score + "%. Right Pinch per uscire dalla simulazione, Left Pinch per riprendere.";
+                            this.messagingManager.publish("text_cmp", { show: true, text: message });
+                            this.calculateState = false;
+                            this.saveState = true;
+                        } else {
+                            this.messagingManager.publish("text_cmp", { show: false });
+                        }
+                    } else {
+                        this.messagingManager.publish("text_cmp", { show: true, text: "Vuoi davvero uscire dall'ufficio? Right Pinch se intendi visualizzare il punteggio totalizzato, altrimenti Left Pinch per annullare" });
+                        this.calculateState = true;
+                    }
                 }
+
+                /*
+                if (m.exit) {
+                    _updateSCORM(this.score);
+                } else if (m.calculate) {
+                    this.score = this._calculateScore();
+                    let message = "Hai totalizzato un numero di azioni corrette pari al " + this.score + "%";
+                    this.messagingManager.publish("text_cmp", { text: message });
+                    this.messagingManager.publish("confirm_cmp", { confirm: false, procediBehaviour: { topic: "exit", message: { exit: true } } });
+                } else {
+                    this.messagingManager.publish("text_cmp", { text: "Vuoi davvero uscire dall'ufficio? Clic su Procedi se intendi visualizzare il punteggio totalizzato, altrimenti clic su Annulla!" });
+                    this.messagingManager.publish("confirm_cmp", { confirm: true, procediBehaviour: { topic: "exit", message: { calculate: true } } });
+                }
+                */
             } else {
                 let conf = confirm("Stai per uscire dall'ufficio. Le tue azioni saranno valutate!");
                 if (conf) {
@@ -254,6 +439,8 @@ export const interaction_component = (() => {
         PickableComponent: PickableComponent,
         CollidableComponent: CollidableComponent,
         ExitComponent: ExitComponent,
-        TextComponent: TextComponent
+        TextComponent: TextComponent,
+        LedComponent: LedComponent
+        //ConfirmComponent: ConfirmComponent
     };
 })()

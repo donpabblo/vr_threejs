@@ -44,9 +44,14 @@ class MyWorld {
 
         if (!this._avatar) {
             this._renderer.xr.enabled = true;
+
             //document.body.appendChild(XRButton.createButton(this._renderer));
             document.body.appendChild(VRButton.createButton(this._renderer));
         }
+
+        this._renderer.xr.addEventListener('sessionstart', (event) => {
+            this._messagingManager.publish("session", { session: event.target.getSession() });
+        });
 
         window.addEventListener('resize', () => {
             this._camera.aspect = window.innerWidth / window.innerHeight;
@@ -63,9 +68,8 @@ class MyWorld {
             far = 10;
         }
         this._camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-        this._camera.position.set(25, 10, 25);
-        if (!this._avatar) {
-            this._camera.position.set(0, 1.7, 0);
+        if (this._avatar) {
+            this._camera.position.set(25, 10, 25);
         }
 
         this._scene = new THREE.Scene();
@@ -73,84 +77,25 @@ class MyWorld {
         this._messagingManager = new messaging_manager.MessagingManager();
 
         this.loadLight();
-        this.loadEnvironment();
-        if (this._avatar) {
-            this.loadPlayer();
-        } else {
-            this.loadControllers();
-        }
-
+        this.loadEnvironment().then(() => {
+            if (this._avatar) {
+                this.loadPlayer();
+            } else {
+                this.loadControllers();
+            }
+        });
         this._previousRAF = null;
+
+
 
         //this.statsVR = new StatsVR(this._scene, this._camera);
         //this.statsVR.setX(-0.5);
         //this.statsVR.setY(0.5);
         //this.statsVR.setZ(-5);
-        //this.makeTextPanel();
+        //this.test = "ASSA";
 
     }
 
-    makeTextPanel() {
-        const container = new ThreeMeshUI.Block({
-            width: 1.3,
-            height: 0.5,
-            padding: 0.05,
-            justifyContent: 'center',
-            textAlign: 'left',
-            fontFamily: '../font/Roboto-msdf.json',
-            fontTexture: '../font/Roboto-msdf.png'
-            // interLine: 0,
-        });
-
-        container.position.set(0, 1, -1.8);
-        container.rotation.x = -0.55;
-        this._scene.add(container);
-
-        container.add(
-            new ThreeMeshUI.Text({
-                // content: 'This library supports line-break-friendly-characters,',
-                content: 'This library supports line break friendly characters',
-                fontSize: 0.055
-            }),
-
-            new ThreeMeshUI.Text({
-                content: ' As well as multi font size lines with consistent vertical spacing',
-                fontSize: 0.08
-            })
-        );
-
-        return
-        container.onAfterUpdate = function () {
-
-
-            console.log(container.lines);
-
-            if (!container.lines) return;
-
-
-            console.log("lines", container.lines);
-
-            var plane = new Mesh(
-                new PlaneGeometry(container.lines.width, container.lines.height),
-                new MeshBasicMaterial({ color: 0xff9900 })
-            );
-
-            // plane.position.x = container.lines.x;
-            // plane.position.y = container.lines.height/2 - container.getInterLine()/2;
-
-            const INNER_HEIGHT = container.getHeight() - (container.padding * 2 || 0);
-
-            if (container.getJustifyContent() === 'start') {
-                plane.position.y = (INNER_HEIGHT / 2) - container.lines.height / 2;
-            } else if (container.getJustifyContent() === 'center') {
-                plane.position.y = 0;
-            } else {
-                plane.position.y = -(INNER_HEIGHT / 2) + container.lines.height / 2
-            }
-
-            container.add(plane);
-        }
-    }
 
     animate() {
         if (this._avatar) {
@@ -206,32 +151,89 @@ class MyWorld {
 
     }
 
+    leftPinchEnd = () => {
+        this.test = "LEFT";
+        this._messagingManager.publish("exit", { reset: true });
+    }
+    rightPinchEnd = () => {
+        this.test = "RIGHT";
+        this._messagingManager.publish("exit", { rightPinch: true });
+    }
+
+    debug(leftHand, rightHand) {
+        document.addEventListener('keyup', (e) => {
+            switch (e.key) {
+                case 'q':
+                    leftHand.dispatchEvent({ type: "pinchend" });
+                    break;
+                case 'y':
+                    rightHand.dispatchEvent({ type: "pinchend" });
+                    break;
+                case 'e':
+                    this._messagingManager.publish("exit", {});
+                    break;
+                case '':
+                    this._messagingManager.publish("text_cmp", {});
+                    break;
+            }
+        });
+    }
+
     loadControllers() {
-        const leftHand = this._renderer.xr.getHand(0);
-        const leftHandModel = new OculusHandModel(leftHand);
-        leftHand.add(leftHandModel);
-        this._scene.add(leftHand);
-        const leftHandEntity = new entity.Entity();
-        leftHandEntity.AddComponent(new controller_input.PinchController({ hand: leftHand, pinchStart: () => { this.test = "Left pinchstart"; }, pinchEnd: () => { this.test = "Left pinchend"; } }));
-        leftHandEntity.AddComponent(new controller_input.IndexTipController({ handModel: leftHandModel }));
-        this._entityManager.Add(leftHandEntity, 'leftHandEntity');
-
-        const controller = this._renderer.xr.getController(0);
-        this._scene.add(controller);
-
         const rightHand = this._renderer.xr.getHand(1);
         const rightHandModel = new OculusHandModel(rightHand);
         rightHand.add(rightHandModel);
         this._scene.add(rightHand);
         const rightHandEntity = new entity.Entity();
-        rightHandEntity.AddComponent(new controller_input.PinchController({ hand: rightHand, pinchStart: () => { this.test = "Right pinchstart"; }, pinchEnd: () => { this.test = "Right pinchend"; } }));
+        rightHandEntity.AddComponent(new controller_input.PinchController({ hand: rightHand, pinchEnd: this.rightPinchEnd }));
         rightHandEntity.AddComponent(new controller_input.IndexTipController({ handModel: rightHandModel }));
-        //rightHandEntity.AddComponent(new controller_input.Sword({ controller: controller }));
         this._entityManager.Add(rightHandEntity, 'rightHandEntity');
 
-        const textEntity = new entity.Entity();
-        textEntity.AddComponent(new interaction_component.TextComponent(this._scene, this._camera, this._messagingManager));
-        this._entityManager.Add(textEntity, 'textEntity');
+        //const controller = this._renderer.xr.getController(0);
+        //this._scene.add(controller);
+
+        const leftHand = this._renderer.xr.getHand(0);
+        const leftHandModel = new OculusHandModel(leftHand);
+        leftHand.add(leftHandModel);
+        this._scene.add(leftHand);
+        const leftHandEntity = new entity.Entity();
+        leftHandEntity.AddComponent(new controller_input.PinchController({ hand: leftHand, pinchEnd: this.leftPinchEnd }));
+        leftHandEntity.AddComponent(new controller_input.IndexTipController({ handModel: leftHandModel }));
+        //rightHandEntity.AddComponent(new controller_input.Sword({ controller: controller }));
+        this._entityManager.Add(leftHandEntity, 'leftHandEntity');
+
+        const textUIEntity = new entity.Entity();
+        textUIEntity.AddComponent(new interaction_component.TextComponent(this._scene, this._camera, this._messagingManager));
+        this._entityManager.Add(textUIEntity, 'textUIEntity');
+
+        //const buttonUIEntity = new entity.Entity();
+        //buttonUIEntity.AddComponent(new interaction_component.ConfirmComponent(this._scene, this._camera, this._messagingManager, [leftHandModel, rightHandModel]));
+        //this._entityManager.Add(buttonUIEntity, 'buttonUIEntity');
+
+        this._messagingManager.publish("text_cmp", { show: true, text: "E' appena finita la giornata lavorativa e sei solo in ufficio. Metti in pratica tutti i comportamenti virtuosi appresi durante il corso. Al termine, usa la porta per uscire dall'ufficio e conoscere il punteggio che hai totalizzato." });
+
+        //leftHand.dispatchEvent({ type: "pinchend" });
+        //rightHand.dispatchEvent({ type: "pinchend" });
+
+        //this._messagingManager.publish("exit", {});
+        //rightHand.dispatchEvent({ type: "pinchend" });
+        this.debug(leftHand, rightHand);
+
+
+
+        //const leftPinchController = new entity.Entity();
+        //leftPinchController.AddComponent(new controller_input.PinchController({ hand: leftHand, pinchEnd: () => { this._messagingManager.publish("text_cmp", { show: true, text: "LEFT PINCH" }); /*this._messagingManager.publish("exit", { reset: true }); */ } }));
+        //this._entityManager.Add(leftPinchController, 'leftPinchController');
+        //
+        //const rightPinchController = new entity.Entity();
+        //rightPinchController.AddComponent(new controller_input.PinchController({ hand: rightHand, pinchEnd: () => { this._messagingManager.publish("text_cmp", { show: true, text: "RIGHT PINCH" }); /*this._messagingManager.publish("exit", { rightPinch: true }); */ } }));
+        //this._entityManager.Add(rightPinchController, 'rightPinchController');
+
+
+        //this._messagingManager.publish("confirm_cmp", { confirm: false });
+
+        //this._messagingManager.publish("text_cmp", {});
+        //this._messagingManager.publish("exit", {});
 
         /*
         const controller1 = this._renderer.xr.getController(0);
@@ -293,41 +295,46 @@ class MyWorld {
     }
 
     loadEnvironment() {
-        this.loadModel('models/' + this._environment).then(glb => {
-            if (this._avatar) {
-                glb.scene.scale.set(5, 5, 5);
-            }
-            this._scene.add(glb.scene);
-            let scene = this._scene.getObjectByName("Scene");
-            const environmentEntity = new entity.Entity();
-            environmentEntity.AddComponent(new interaction_component.CollidableComponent(scene));
-            this._entityManager.Add(environmentEntity, 'environment');
-
-            this._scene.traverse((obj) => {
-                if (obj.userData.components) {
-                    const currEntity = new entity.Entity();
-                    const components = JSON.parse(obj.userData.components);
-                    for (let cmp of components) {
-                        var currCmp;
-                        switch (cmp.type) {
-                            case "ClickableComponent":
-                                currCmp = new interaction_component.ClickableComponent(this._messagingManager, obj, cmp.topic);
-                                break;
-                            case "MonitorComponent":
-                                currCmp = new interaction_component.MonitorComponent(this._messagingManager, obj, cmp.topic);
-                                break;
-                            case "NeonComponent":
-                                currCmp = new interaction_component.NeonComponent(this._messagingManager, obj, cmp.topic);
-                                break;
-                            case "ExitComponent":
-                                let isVR = this._avatar ? false : true;
-                                currCmp = new interaction_component.ExitComponent(this._messagingManager, cmp.topic, isVR);
-                                break;
-                        }
-                        currEntity.AddComponent(currCmp);
-                    }
-                    this._entityManager.Add(currEntity, '');
+        return new Promise((resolve, reject) => {
+            this.loadModel('models/' + this._environment).then(glb => {
+                if (this._avatar) {
+                    glb.scene.scale.set(5, 5, 5);
                 }
+                this._scene.add(glb.scene);
+                let scene = this._scene.getObjectByName("Scene");
+                const environmentEntity = new entity.Entity();
+                environmentEntity.AddComponent(new interaction_component.CollidableComponent(scene));
+                this._entityManager.Add(environmentEntity, 'environment');
+
+                this._scene.traverse((obj) => {
+                    if (obj.userData.components) {
+                        const currEntity = new entity.Entity();
+                        const components = JSON.parse(obj.userData.components);
+                        for (let cmp of components) {
+                            var currCmp;
+                            switch (cmp.type) {
+                                case "ClickableComponent":
+                                    currCmp = new interaction_component.ClickableComponent(this._messagingManager, obj, cmp.topic);
+                                    break;
+                                case "MonitorComponent":
+                                    currCmp = new interaction_component.MonitorComponent(this._messagingManager, obj, cmp.topic);
+                                    break;
+                                case "NeonComponent":
+                                    currCmp = new interaction_component.NeonComponent(this._messagingManager, obj, cmp.topic);
+                                    break;
+                                case "LedComponent":
+                                    currCmp = new interaction_component.LedComponent(this._messagingManager, obj, cmp.topic);
+                                    break;
+                                case "ExitComponent":
+                                    currCmp = new interaction_component.ExitComponent(this._messagingManager);
+                                    break;
+                            }
+                            currEntity.AddComponent(currCmp);
+                        }
+                        this._entityManager.Add(currEntity, '');
+                    }
+                });
+                resolve();
             });
         });
     }
@@ -345,5 +352,21 @@ class MyWorld {
 
 let _APP = null;
 window.addEventListener('DOMContentLoaded', () => {
-    _APP = new MyWorld();
+    if (navigator.xr) {
+        navigator.xr.isSessionSupported("immersive-vr").then((isSupported) => {
+            if (isSupported) {
+                _APP = new MyWorld();
+            } else {
+                document.getElementById("choose-player").style.visibility = "visible";
+                document.getElementById("claire").addEventListener("click", () => {
+                    _APP = new MyWorld("claire");
+                    document.getElementById("choose-player").style.visibility = "hidden";
+                });
+                document.getElementById("aj").addEventListener("click", () => {
+                    _APP = new MyWorld("aj");
+                    document.getElementById("choose-player").style.visibility = "hidden";
+                });
+            }
+        });
+    }
 });

@@ -10,6 +10,37 @@
 </head>
 
 <body>
+    <div id="choose-player" style="visibility: hidden">
+        <div class="intro">
+            E' appena finita la giornata lavorativa e sei solo in ufficio. Scegli il tuo avatar e metti in pratica tutti
+            i comportamenti virtuosi appresi durante il corso. Al termine, clicca sulla porta per uscire dall'ufficio e
+            conoscere il punteggio che hai totalizzato.
+        </div>
+        <div class="grid-container">
+            <div class="grid-child">
+                <model-viewer camera-controls touch-action="pan-y" autoplay scale="0.5 0.5 0.5" shadow-intensity="1"
+                    src="models/aj/aj.glb" alt="Aj"></model-viewer>
+                <button id="aj" class="button-40" role="button">Adam</button>
+            </div>
+
+            <div class="grid-child">
+                <model-viewer camera-controls touch-action="pan-y" autoplay scale="0.5 0.5 0.5" shadow-intensity="1"
+                    src="models/claire/claire.glb" alt="Claire"></model-viewer>
+                <button id="claire" class="button-40" role="button">Claire</button>
+            </div>
+
+        </div>
+        <div class="intro">
+            <div class="grid-cont">
+                <div class="grid-child">
+                    <img src="img/wasd.png" width="100px" />
+                </div>
+                <div class="grid-chil">
+                    per muoversi e clic del mouse per interagire con gli oggetti
+                </div>
+            </div>
+        </div>
+    </div>
     <!-- Import maps polyfill -->
     <!-- Remove this when import maps will be widely supported -->
     <script async src="./js/es-module-shims.js"></script>
