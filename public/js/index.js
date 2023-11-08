@@ -26,6 +26,7 @@ class MyWorld {
             this._environment = 'roblox_office.glb';
         } else {
             this._environment = 'simple_office.glb';
+            //this._environment = 'test_shadow.glb';
         }
         this.init();
         this.animate();
@@ -34,8 +35,9 @@ class MyWorld {
 
     init() {
         this._renderer = new THREE.WebGLRenderer({ antialias: true });
-        //this._renderer.shadowMap.enabled = true;
+        this._renderer.shadowMap.enabled = true;
         //this._renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        //this._renderer.setClearColor(0x000000);
         this._renderer.useLegacyLights = false;
         this._renderer.setPixelRatio(window.devicePixelRatio);
         this._renderer.setSize(window.innerWidth, window.innerHeight);
@@ -45,8 +47,8 @@ class MyWorld {
         if (!this._avatar) {
             this._renderer.xr.enabled = true;
 
-            //document.body.appendChild(XRButton.createButton(this._renderer));
-            document.body.appendChild(VRButton.createButton(this._renderer));
+            document.body.appendChild(XRButton.createButton(this._renderer));
+            //document.body.appendChild(VRButton.createButton(this._renderer));
         }
 
         this._renderer.xr.addEventListener('sessionstart', (event) => {
@@ -80,6 +82,7 @@ class MyWorld {
         this.loadEnvironment().then(() => {
             if (this._avatar) {
                 this.loadPlayer();
+                this.loadTutor();
             } else {
                 this.loadControllers();
             }
@@ -121,6 +124,8 @@ class MyWorld {
                 this.step(time - this._previousRAF);
                 //ThreeMeshUI.update();
                 this._previousRAF = time;
+                this.spotLightHelper.update();
+
             });
         }
     }
@@ -128,6 +133,19 @@ class MyWorld {
     step(timeElapsed) {
         const timeElapsedS = Math.min(1.0 / 30.0, timeElapsed * 0.001);
         this._entityManager.Update(timeElapsedS);
+    }
+
+    loadTutor() {
+        const params = {
+            camera: this._camera,
+            scene: this._scene,
+            fbx_path: './models/ai/'
+        };
+        const tutor = new entity.Entity();
+        tutor.AddComponent(new player_input.BasicCharacterControllerInput(params));
+        tutor.AddComponent(new player_entity.BasicCharacterController(params));
+        this._entityManager.Add(tutor, 'tutor');
+
     }
 
     loadPlayer() {
@@ -290,8 +308,39 @@ class MyWorld {
     }
 
     loadLight() {
-        let light = new THREE.AmbientLight(0xFFFFFF, 0.25);
+        let light = new THREE.AmbientLight(0xFFFFFF, 1);
         this._scene.add(light);
+
+        /*
+        var objgeometry = new THREE.BoxGeometry(8, 12, 8);
+        var objmaterial = new THREE.MeshPhongMaterial({
+            color: 0x1C1C03,
+            wireframe: false
+        });
+        var obj = new THREE.Mesh(objgeometry, objmaterial);
+        obj.castShadow = true;
+        obj.receiveShadow = true;
+        obj.position.z = 0;
+        obj.position.x = 0;
+        obj.position.y = 1;
+        this._scene.add(obj);
+
+        var sLight = new THREE.SpotLight(0xFFFFFF, 10); // spotfény segédgeometriával
+        sLight.position.set(0, 2, -1);
+        sLight.castShadow = true;
+        sLight.distance = 300;
+        sLight.target = obj;
+        sLight.angle = Math.PI * 0.2;
+        sLight.shadow.camera.near = 0.1;
+        sLight.shadow.camera.far = 100;
+        sLight.shadow.mapSize.width = 2048;
+        sLight.shadow.mapSize.height = 2048;
+
+        this._scene.add(sLight);
+
+        this.spotLightHelper = new THREE.SpotLightHelper(sLight);
+        this._scene.add(this.spotLightHelper);
+        */
     }
 
     loadEnvironment() {

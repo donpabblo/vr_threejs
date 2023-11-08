@@ -25,9 +25,10 @@ export const messaging_manager = (() => {
         }
 
         publish(topic, message) {
-            this.subscribers[topic].forEach(callback => callback(message))
+            if (topic in this.subscribers) {
+                this.subscribers[topic].forEach(callback => callback(message))
+            }
         }
-       
     }
 
     return {
