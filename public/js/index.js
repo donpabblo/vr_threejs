@@ -82,7 +82,7 @@ class MyWorld {
         this.loadEnvironment().then(() => {
             if (this._avatar) {
                 this.loadPlayer();
-                this.loadTutor();
+                //this.loadTutor();
             } else {
                 this.loadControllers();
             }
